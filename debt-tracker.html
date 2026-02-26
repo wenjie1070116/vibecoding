@@ -19,7 +19,8 @@ td,th { border:1px solid #ccc; padding:5px 10px; }
 <input id="payer" placeholder="Payer">
 <input id="amount" type="number" placeholder="Amount">
 <input id="participants" placeholder="Participants comma separated">
-<input id="Description" placeholder="Short Description of the Payment">
+<input id="description" placeholder="Short Description of the Payment">
+
 <button onclick="addPayment()">Add</button>
 
 <button onclick="generateLink()">Generate Share Link</button>
@@ -42,18 +43,19 @@ function addPayment(){
 
 let payment = {
 
-name: name.value,
-payer: payer.value,
-amount: parseFloat(amount.value),
-participants: participants.value.split(",").map(x=>x.trim()),
-description: description.value
+name: document.getElementById("name").value,
+payer: document.getElementById("payer").value,
+amount: parseFloat(document.getElementById("amount").value),
+participants: document.getElementById("participants").value.split(",").map(x=>x.trim()),
+description: document.getElementById("description").value
+
 };
 
 payments.push(payment);
 
 save();
-
 render();
+
 }
 
 function save(){
@@ -65,116 +67,18 @@ localStorage.setItem("payments", JSON.stringify(payments));
 function render(){
 
 renderPayments();
-
 renderDebts();
 
 }
 
 function renderPayments(){
 
-let html="<tr><th>Name</th><th>Payer</th><th>Amount</th><th>Participants</th></tr>";
+let html="<tr><th>Name</th><th>Payer</th><th>Amount</th><th>Participants</th><th>Description</th></tr>";
 
 payments.forEach(p=>{
 
 html+=`<tr>
 <td>${p.name}</td>
 <td>${p.payer}</td>
-<td>${p.amount}</td>
-<td>${p.participants.join(", ")}</td>
-<td>${p.description}</td>
-</tr>`;
-
-});
-
-paymentsTable.innerHTML=html;
-
-}
-
-function renderDebts(){
-
-let balance={};
-
-payments.forEach(p=>{
-
-let share=p.amount/p.participants.length;
-
-p.participants.forEach(person=>{
-
-if(person!=p.payer){
-
-balance[person]=(balance[person]||0)-share;
-balance[p.payer]=(balance[p.payer]||0)+share;
-
-}
-
-});
-
-});
-
-let debtors=[];
-let creditors=[];
-
-for(let person in balance){
-
-if(balance[person]<0)
-debtors.push({person,amount:-balance[person]});
-
-else
-creditors.push({person,amount:balance[person]});
-
-}
-
-let html="<tr><th>From</th><th>To</th><th>Amount</th></tr>";
-
-let i=0,j=0;
-
-while(i<debtors.length && j<creditors.length){
-
-let amt=Math.min(debtors[i].amount,creditors[j].amount);
-
-html+=`<tr>
-<td>${debtors[i].person}</td>
-<td>${creditors[j].person}</td>
-<td>${amt.toFixed(2)}</td>
-</tr>`;
-
-debtors[i].amount-=amt;
-creditors[j].amount-=amt;
-
-if(debtors[i].amount==0)i++;
-if(creditors[j].amount==0)j++;
-
-}
-
-debtsTable.innerHTML=html;
-
-}
-
-function generateLink(){
-
-let data=btoa(JSON.stringify(payments));
-
-let link=location.origin+location.pathname+"?data="+data;
-
-shareLink.value=link;
-
-}
-
-function loadFromURL(){
-
-let params=new URLSearchParams(location.search);
-
-if(params.get("data")){
-
-payments=JSON.parse(atob(params.get("data")));
-
-save();
-
-}
-
-}
-
-</script>
-
-</body>
-</html>
+<td>${p.amount.toFixed(2)}</td>
+<td>${p.partici
