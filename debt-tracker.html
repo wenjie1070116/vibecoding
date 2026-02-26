@@ -15,10 +15,11 @@ td,th { border:1px solid #ccc; padding:5px 10px; }
 <h2>Debt Simplifier (Shareable)</h2>
 
 <h3>Add Payment</h3>
-<input id="name" placeholder="Name (Dinner)">
+<input id="name" placeholder="Name of Payment">
 <input id="payer" placeholder="Payer">
 <input id="amount" type="number" placeholder="Amount">
 <input id="participants" placeholder="Participants comma separated">
+<input id="Description" placeholder="Short Description of the Payment">
 <button onclick="addPayment()">Add</button>
 
 <button onclick="generateLink()">Generate Share Link</button>
@@ -44,7 +45,8 @@ let payment = {
 name: name.value,
 payer: payer.value,
 amount: parseFloat(amount.value),
-participants: participants.value.split(",").map(x=>x.trim())
+participants: participants.value.split(",").map(x=>x.trim()),
+description: description.value
 };
 
 payments.push(payment);
@@ -78,7 +80,8 @@ html+=`<tr>
 <td>${p.name}</td>
 <td>${p.payer}</td>
 <td>${p.amount}</td>
-<td>${p.participants.join(",")}</td>
+<td>${p.participants.join(", ")}</td>
+<td>${p.description}</td>
 </tr>`;
 
 });
