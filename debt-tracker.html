@@ -2,83 +2,432 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shareable Debt Simplifier</title>
+<title>Debt Simplifier (Shareable)</title>
+
 <style>
-body { font-family: Arial; padding:20px; }
-input,button { margin:5px; }
-table { border-collapse: collapse; margin-top:10px; }
-td,th { border:1px solid #ccc; padding:5px 10px; }
+body {
+    font-family: Arial;
+    padding: 20px;
+}
+
+input, button {
+    margin: 5px;
+    padding: 5px;
+}
+
+button {
+    cursor: pointer;
+}
+
+table {
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+td, th {
+    border: 1px solid #ccc;
+    padding: 6px 12px;
+}
+
+th {
+    background: #f5f5f5;
+}
 </style>
+
 </head>
 <body>
 
-<h2>Debt Simplifier (Shareable)</h2>
+<h2>Debt Simplifier</h2>
 
 <h3>Add Payment</h3>
-<input id="name" placeholder="Name of Payment">
-<input id="payer" placeholder="Payer">
-<input id="amount" type="number" placeholder="Amount">
-<input id="participants" placeholder="Participants comma separated">
-<input id="description" placeholder="Short Description of the Payment">
 
-<button onclick="addPayment()">Add</button>
+<input id="name" placeholder="Payment Name">
+
+<input id="payer" placeholder="Payer">
+
+<input id="amount" type="number" step="0.01" placeholder="Amount">
+
+<input id="participants" placeholder="Participants (comma separated)">
+
+<input id="description" placeholder="Description">
+
+<button onclick="addPayment()">Add Payment</button>
+
+<br><br>
 
 <button onclick="generateLink()">Generate Share Link</button>
+
 <input id="shareLink" style="width:400px">
 
 <h3>Payments</h3>
+
 <table id="paymentsTable"></table>
 
 <h3>Simplified Debts</h3>
+
 <table id="debtsTable"></table>
+
 
 <script>
 
 let payments = JSON.parse(localStorage.getItem("payments") || "[]");
 
 loadFromURL();
+
 render();
+
+
 
 function addPayment(){
 
-let payment = {
+    let name = document.getElementById("name").value;
+    let payer = document.getElementById("payer").value;
+    let amount = parseFloat(document.getElementById("amount").value);
+    let participants =
+        document.getElementById("participants").value
+        .split(",")
+        .map(x => x.trim())
+        .filter(x => x.length > 0);
 
-name: document.getElementById("name").value,
-payer: document.getElementById("payer").value,
-amount: parseFloat(document.getElementById("amount").value),
-participants: document.getElementById("participants").value.split(",").map(x=>x.trim()),
-description: document.getElementById("description").value
+    let description =
+        document.getElementById("description").value;
 
-};
 
-payments.push(payment);
+    if(!name || !payer || !amount || participants.length==0){
 
-save();
-render();
+        alert("Please fill all required fields");
+
+        return;
+    }
+
+
+    payments.push({
+
+        name,
+        payer,
+        amount,
+        participants,
+        description
+
+    });
+
+
+    save();
+
+    render();
+
+    clearInputs();
 
 }
+
+
+
+function deletePayment(index){
+
+    payments.splice(index,1);
+
+    save();
+
+    render();
+
+}
+
+
+
+function clearInputs(){
+
+    document.getElementById("name").value="";
+    document.getElementById("payer").value="";
+    document.getElementById("amount").value="";
+    document.getElementById("participants").value="";
+    document.getElementById("description").value="";
+
+}
+
+
 
 function save(){
 
-localStorage.setItem("payments", JSON.stringify(payments));
+    localStorage.setItem(
+
+        "payments",
+
+        JSON.stringify(payments)
+
+    );
 
 }
+
+
 
 function render(){
 
-renderPayments();
-renderDebts();
+    renderPayments();
+
+    renderDebts();
 
 }
 
+
+
 function renderPayments(){
 
-let html="<tr><th>Name</th><th>Payer</th><th>Amount</th><th>Participants</th><th>Description</th></tr>";
+    let html =
 
-payments.forEach(p=>{
+        "<tr>" +
+        "<th>Name</th>" +
+        "<th>Payer</th>" +
+        "<th>Amount</th>" +
+        "<th>Participants</th>" +
+        "<th>Description</th>" +
+        "<th></th>" +
+        "</tr>";
 
-html+=`<tr>
-<td>${p.name}</td>
-<td>${p.payer}</td>
-<td>${p.amount.toFixed(2)}</td>
-<td>${p.partici
+
+    payments.forEach((p,index)=>{
+
+        html +=
+
+        "<tr>" +
+
+        "<td>"+p.name+"</td>" +
+
+        "<td>"+p.payer+"</td>" +
+
+        "<td>"+p.amount.toFixed(2)+"</td>" +
+
+        "<td>"+p.participants.join(", ")+"</td>" +
+
+        "<td>"+(p.description||"")+"</td>" +
+
+        "<td>" +
+        "<button onclick='deletePayment("+index+")'>" +
+        "Delete" +
+        "</button>" +
+        "</td>" +
+
+        "</tr>";
+
+    });
+
+
+    document.getElementById(
+
+        "paymentsTable"
+
+    ).innerHTML = html;
+
+}
+
+
+
+function renderDebts(){
+
+    let balance = {};
+
+
+
+    payments.forEach(p=>{
+
+        let share =
+
+            p.amount /
+
+            p.participants.length;
+
+
+
+        p.participants.forEach(person=>{
+
+            if(person != p.payer){
+
+                balance[person] =
+                    (balance[person] || 0)
+                    - share;
+
+                balance[p.payer] =
+                    (balance[p.payer] || 0)
+                    + share;
+
+            }
+
+        });
+
+    });
+
+
+
+    let debtors=[];
+    let creditors=[];
+
+
+
+    for(let person in balance){
+
+        if(balance[person] < -0.01){
+
+            debtors.push({
+
+                person,
+
+                amount:-balance[person]
+
+            });
+
+        }
+        else if(balance[person] > 0.01){
+
+            creditors.push({
+
+                person,
+
+                amount:balance[person]
+
+            });
+
+        }
+
+    }
+
+
+
+    let html =
+
+        "<tr>" +
+        "<th>From</th>" +
+        "<th>To</th>" +
+        "<th>Amount</th>" +
+        "</tr>";
+
+
+
+    let i=0;
+    let j=0;
+
+
+
+    while(
+
+        i<debtors.length &&
+
+        j<creditors.length
+
+    ){
+
+        let amt = Math.min(
+
+            debtors[i].amount,
+
+            creditors[j].amount
+
+        );
+
+
+
+        html +=
+
+        "<tr>" +
+
+        "<td>"+debtors[i].person+"</td>" +
+
+        "<td>"+creditors[j].person+"</td>" +
+
+        "<td>"+amt.toFixed(2)+"</td>" +
+
+        "</tr>";
+
+
+
+        debtors[i].amount -= amt;
+
+        creditors[j].amount -= amt;
+
+
+
+        if(debtors[i].amount <= 0.01)
+        i++;
+
+        if(creditors[j].amount <= 0.01)
+        j++;
+
+    }
+
+
+
+    document.getElementById(
+
+        "debtsTable"
+
+    ).innerHTML = html;
+
+}
+
+
+
+function generateLink(){
+
+    let data = btoa(
+
+        JSON.stringify(payments)
+
+    );
+
+
+
+    let link =
+
+        location.origin +
+
+        location.pathname +
+
+        "?data=" +
+
+        data;
+
+
+
+    document.getElementById(
+
+        "shareLink"
+
+    ).value = link;
+
+}
+
+
+
+function loadFromURL(){
+
+    let params =
+
+        new URLSearchParams(
+
+            location.search
+
+        );
+
+
+
+    if(params.get("data")){
+
+        payments = JSON.parse(
+
+            atob(params.get("data"))
+
+        );
+
+
+
+        save();
+
+    }
+
+}
+
+
+
+</script>
+
+
+</body>
+</html>
