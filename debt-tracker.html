@@ -2,17 +2,23 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Debt Simplifier (Shareable)</title>
-
+<title>Debt Simplifier</title>
 <style>
 body {
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-input, button {
+h2, h3 {
+    margin-bottom: 10px;
+}
+
+input, select, button {
     margin: 5px;
-    padding: 5px;
+    padding: 8px;
+    font-size: 14px;
 }
 
 button {
@@ -22,412 +28,383 @@ button {
 table {
     border-collapse: collapse;
     margin-top: 10px;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 1000px;
 }
 
 td, th {
     border: 1px solid #ccc;
-    padding: 6px 12px;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
 }
 
 th {
     background: #f5f5f5;
 }
-</style>
 
+.section {
+    margin-bottom: 28px;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.currency-block {
+    margin-top: 18px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-width: 1000px;
+}
+
+.currency-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.small-note {
+    color: #666;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+input[type="text"], input[type="number"] {
+    min-width: 180px;
+}
+
+#shareLink {
+    width: 500px;
+    max-width: 100%;
+}
+
+.delete-btn {
+    background: #fff0f0;
+    border: 1px solid #e0b4b4;
+}
+
+.copy-btn {
+    background: #f3f8ff;
+    border: 1px solid #b9d1f3;
+}
+</style>
 </head>
 <body>
 
 <h2>Debt Simplifier</h2>
 
-<h3>Add Payment</h3>
+<div class="section">
+    <h3>Add Payment</h3>
+    <div class="row">
+        <input id="name" type="text" placeholder="Payment Name">
+        <input id="payer" type="text" placeholder="Payer">
+        <input id="amount" type="number" step="0.01" placeholder="Amount">
+        <select id="currency">
+            <option value="USD">$</option>
+            <option value="INKIND">inKind Cash</option>
+            <option value="HYATT">Hyatt Points</option>
+        </select>
+        <input id="participants" type="text" placeholder="Participants (comma separated)">
+        <input id="description" type="text" placeholder="Description">
+        <button onclick="addPayment()">Add Payment</button>
+    </div>
+    <div class="small-note">
+        Currencies are tracked separately. No conversion is applied between $, inKind Cash, and Hyatt Points.
+    </div>
+</div>
 
-<input id="name" placeholder="Payment Name">
+<div class="section">
+    <h3>Share</h3>
+    <div class="row">
+        <button onclick="generateLink()">Generate Share Link</button>
+        <button class="copy-btn" onclick="copyShareLink()">Copy Link</button>
+        <input id="shareLink" type="text" readonly placeholder="Generated share link will appear here">
+    </div>
+</div>
 
-<input id="payer" placeholder="Payer">
+<div class="section">
+    <h3>Payments</h3>
+    <table id="paymentsTable"></table>
+</div>
 
-<input id="amount" type="number" step="0.01" placeholder="Amount">
-
-<input id="participants" placeholder="Participants (comma separated)">
-
-<input id="description" placeholder="Description">
-
-<button onclick="addPayment()">Add Payment</button>
-
-<br><br>
-
-<button onclick="generateLink()">Generate Share Link</button>
-
-<input id="shareLink" style="width:400px">
-
-<h3>Payments</h3>
-
-<table id="paymentsTable"></table>
-
-<h3>Simplified Debts</h3>
-
-<table id="debtsTable"></table>
-
+<div class="section">
+    <h3>Simplified Debts</h3>
+    <div id="debtsContainer"></div>
+</div>
 
 <script>
-
 let payments = JSON.parse(localStorage.getItem("payments") || "[]");
 
 loadFromURL();
-
 render();
 
-
-
-function addPayment(){
-
-    let name = document.getElementById("name").value;
-    let payer = document.getElementById("payer").value;
-    let amount = parseFloat(document.getElementById("amount").value);
-    let participants =
-        document.getElementById("participants").value
+function addPayment() {
+    const name = document.getElementById("name").value.trim();
+    const payer = document.getElementById("payer").value.trim();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const currency = document.getElementById("currency").value;
+    const participants = document.getElementById("participants").value
         .split(",")
         .map(x => x.trim())
         .filter(x => x.length > 0);
+    const description = document.getElementById("description").value.trim();
 
-    let description =
-        document.getElementById("description").value;
-
-
-    if(!name || !payer || !amount || participants.length==0){
-
-        alert("Please fill all required fields");
-
+    if (!name || !payer || !amount || amount <= 0 || participants.length === 0) {
+        alert("Please fill Payment Name, Payer, Amount, and Participants.");
         return;
     }
 
+    if (!participants.includes(payer)) {
+        participants.push(payer);
+    }
 
     payments.push({
-
         name,
         payer,
         amount,
+        currency,
         participants,
         description
-
     });
 
-
     save();
-
     render();
-
     clearInputs();
-
 }
 
-
-
-function deletePayment(index){
-
-    payments.splice(index,1);
-
+function deletePayment(index) {
+    payments.splice(index, 1);
     save();
-
     render();
-
 }
 
-
-
-function clearInputs(){
-
-    document.getElementById("name").value="";
-    document.getElementById("payer").value="";
-    document.getElementById("amount").value="";
-    document.getElementById("participants").value="";
-    document.getElementById("description").value="";
-
+function clearInputs() {
+    document.getElementById("name").value = "";
+    document.getElementById("payer").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("currency").value = "USD";
+    document.getElementById("participants").value = "";
+    document.getElementById("description").value = "";
 }
 
-
-
-function save(){
-
-    localStorage.setItem(
-
-        "payments",
-
-        JSON.stringify(payments)
-
-    );
-
+function save() {
+    localStorage.setItem("payments", JSON.stringify(payments));
 }
 
-
-
-function render(){
-
+function render() {
     renderPayments();
-
     renderDebts();
-
 }
 
+function renderPayments() {
+    let html = `
+        <tr>
+            <th>Name</th>
+            <th>Payer</th>
+            <th>Amount</th>
+            <th>Currency</th>
+            <th>Participants</th>
+            <th>Description</th>
+            <th>Action</th>
+        </tr>
+    `;
 
+    if (payments.length === 0) {
+        html += `
+            <tr>
+                <td colspan="7">No payments yet.</td>
+            </tr>
+        `;
+    } else {
+        payments.forEach((p, index) => {
+            html += `
+                <tr>
+                    <td>${escapeHtml(p.name)}</td>
+                    <td>${escapeHtml(p.payer)}</td>
+                    <td>${formatAmount(p.amount, p.currency)}</td>
+                    <td>${currencyLabel(p.currency)}</td>
+                    <td>${escapeHtml(p.participants.join(", "))}</td>
+                    <td>${escapeHtml(p.description || "")}</td>
+                    <td><button class="delete-btn" onclick="deletePayment(${index})">Delete</button></td>
+                </tr>
+            `;
+        });
+    }
 
-function renderPayments(){
+    document.getElementById("paymentsTable").innerHTML = html;
+}
 
-    let html =
+function renderDebts() {
+    const container = document.getElementById("debtsContainer");
+    const currencies = ["USD", "INKIND", "HYATT"];
+    let html = "";
 
-        "<tr>" +
-        "<th>Name</th>" +
-        "<th>Payer</th>" +
-        "<th>Amount</th>" +
-        "<th>Participants</th>" +
-        "<th>Description</th>" +
-        "<th></th>" +
-        "</tr>";
+    currencies.forEach(currency => {
+        const simplified = getSimplifiedDebtsByCurrency(currency);
 
+        html += `
+            <div class="currency-block">
+                <div class="currency-title">${currencyLabel(currency)}</div>
+                <table>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Amount</th>
+                    </tr>
+        `;
 
-    payments.forEach((p,index)=>{
+        if (simplified.length === 0) {
+            html += `
+                <tr>
+                    <td colspan="3">No debts in this currency.</td>
+                </tr>
+            `;
+        } else {
+            simplified.forEach(d => {
+                html += `
+                    <tr>
+                        <td>${escapeHtml(d.from)}</td>
+                        <td>${escapeHtml(d.to)}</td>
+                        <td>${formatAmount(d.amount, currency)}</td>
+                    </tr>
+                `;
+            });
+        }
 
-        html +=
-
-        "<tr>" +
-
-        "<td>"+p.name+"</td>" +
-
-        "<td>"+p.payer+"</td>" +
-
-        "<td>"+p.amount.toFixed(2)+"</td>" +
-
-        "<td>"+p.participants.join(", ")+"</td>" +
-
-        "<td>"+(p.description||"")+"</td>" +
-
-        "<td>" +
-        "<button onclick='deletePayment("+index+")'>" +
-        "Delete" +
-        "</button>" +
-        "</td>" +
-
-        "</tr>";
-
+        html += `
+                </table>
+            </div>
+        `;
     });
 
-
-    document.getElementById(
-
-        "paymentsTable"
-
-    ).innerHTML = html;
-
+    container.innerHTML = html;
 }
 
+function getSimplifiedDebtsByCurrency(currency) {
+    const balance = {};
 
+    payments
+        .filter(p => p.currency === currency)
+        .forEach(p => {
+            const share = p.amount / p.participants.length;
 
-function renderDebts(){
-
-    let balance = {};
-
-
-
-    payments.forEach(p=>{
-
-        let share =
-
-            p.amount /
-
-            p.participants.length;
-
-
-
-        p.participants.forEach(person=>{
-
-            if(person != p.payer){
-
-                balance[person] =
-                    (balance[person] || 0)
-                    - share;
-
-                balance[p.payer] =
-                    (balance[p.payer] || 0)
-                    + share;
-
-            }
-
+            p.participants.forEach(person => {
+                if (person !== p.payer) {
+                    balance[person] = (balance[person] || 0) - share;
+                    balance[p.payer] = (balance[p.payer] || 0) + share;
+                } else {
+                    if (!(person in balance)) {
+                        balance[person] = balance[person] || 0;
+                    }
+                }
+            });
         });
 
+    const debtors = [];
+    const creditors = [];
+
+    Object.keys(balance).forEach(person => {
+        const amt = round2(balance[person]);
+        if (amt < -0.01) {
+            debtors.push({ person, amount: -amt });
+        } else if (amt > 0.01) {
+            creditors.push({ person, amount: amt });
+        }
     });
 
+    const simplified = [];
+    let i = 0;
+    let j = 0;
 
+    while (i < debtors.length && j < creditors.length) {
+        const amt = Math.min(debtors[i].amount, creditors[j].amount);
+        const roundedAmt = round2(amt);
 
-    let debtors=[];
-    let creditors=[];
-
-
-
-    for(let person in balance){
-
-        if(balance[person] < -0.01){
-
-            debtors.push({
-
-                person,
-
-                amount:-balance[person]
-
+        if (roundedAmt > 0.01) {
+            simplified.push({
+                from: debtors[i].person,
+                to: creditors[j].person,
+                amount: roundedAmt
             });
-
-        }
-        else if(balance[person] > 0.01){
-
-            creditors.push({
-
-                person,
-
-                amount:balance[person]
-
-            });
-
         }
 
+        debtors[i].amount = round2(debtors[i].amount - roundedAmt);
+        creditors[j].amount = round2(creditors[j].amount - roundedAmt);
+
+        if (debtors[i].amount <= 0.01) i++;
+        if (creditors[j].amount <= 0.01) j++;
     }
 
+    return simplified;
+}
 
+function generateLink() {
+    const data = btoa(unescape(encodeURIComponent(JSON.stringify(payments))));
+    const link = location.origin + location.pathname + "?data=" + encodeURIComponent(data);
+    document.getElementById("shareLink").value = link;
+}
 
-    let html =
-
-        "<tr>" +
-        "<th>From</th>" +
-        "<th>To</th>" +
-        "<th>Amount</th>" +
-        "</tr>";
-
-
-
-    let i=0;
-    let j=0;
-
-
-
-    while(
-
-        i<debtors.length &&
-
-        j<creditors.length
-
-    ){
-
-        let amt = Math.min(
-
-            debtors[i].amount,
-
-            creditors[j].amount
-
-        );
-
-
-
-        html +=
-
-        "<tr>" +
-
-        "<td>"+debtors[i].person+"</td>" +
-
-        "<td>"+creditors[j].person+"</td>" +
-
-        "<td>"+amt.toFixed(2)+"</td>" +
-
-        "</tr>";
-
-
-
-        debtors[i].amount -= amt;
-
-        creditors[j].amount -= amt;
-
-
-
-        if(debtors[i].amount <= 0.01)
-        i++;
-
-        if(creditors[j].amount <= 0.01)
-        j++;
-
+function copyShareLink() {
+    const input = document.getElementById("shareLink");
+    if (!input.value) {
+        alert("Generate a share link first.");
+        return;
     }
-
-
-
-    document.getElementById(
-
-        "debtsTable"
-
-    ).innerHTML = html;
-
+    input.select();
+    input.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    alert("Share link copied.");
 }
 
+function loadFromURL() {
+    const params = new URLSearchParams(location.search);
+    const data = params.get("data");
 
-
-function generateLink(){
-
-    let data = btoa(
-
-        JSON.stringify(payments)
-
-    );
-
-
-
-    let link =
-
-        location.origin +
-
-        location.pathname +
-
-        "?data=" +
-
-        data;
-
-
-
-    document.getElementById(
-
-        "shareLink"
-
-    ).value = link;
-
-}
-
-
-
-function loadFromURL(){
-
-    let params =
-
-        new URLSearchParams(
-
-            location.search
-
-        );
-
-
-
-    if(params.get("data")){
-
-        payments = JSON.parse(
-
-            atob(params.get("data"))
-
-        );
-
-
-
-        save();
-
+    if (data) {
+        try {
+            payments = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(data)))));
+            save();
+        } catch (e) {
+            console.error("Failed to load shared data:", e);
+            alert("Could not load shared data from the link.");
+        }
     }
-
 }
 
+function currencyLabel(currency) {
+    if (currency === "USD") return "$";
+    if (currency === "INKIND") return "inKind Cash";
+    if (currency === "HYATT") return "Hyatt Points";
+    return currency;
+}
 
+function formatAmount(amount, currency) {
+    const rounded = round2(amount);
+    if (currency === "USD") return "$" + rounded.toFixed(2);
+    if (currency === "INKIND") return rounded.toFixed(2) + " inKind Cash";
+    if (currency === "HYATT") return rounded.toFixed(2) + " Hyatt Points";
+    return rounded.toFixed(2) + " " + currency;
+}
 
+function round2(num) {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 </script>
-
 
 </body>
 </html>
