@@ -79,6 +79,10 @@ input[type="text"], input[type="number"] {
     min-width: 180px;
 }
 
+#participantInput {
+    min-width: 420px;
+}
+
 #shareLink {
     width: 500px;
     max-width: 100%;
@@ -93,6 +97,143 @@ input[type="text"], input[type="number"] {
     background: #f3f8ff;
     border: 1px solid #b9d1f3;
 }
+
+.edit-btn {
+    background: #f7f4ff;
+    border: 1px solid #d2c7fd;
+}
+
+.save-btn {
+    background: #effdf3;
+    border: 1px solid #b7ebc6;
+}
+
+.cancel-btn {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+}
+
+.participant-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    padding: 6px 10px;
+    margin: 4px 6px 0 0;
+    background: #fafafa;
+}
+
+.participant-tag button {
+    margin: 0;
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
+.helper {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.checkbox-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-top: 10px;
+    max-width: 900px;
+}
+
+.checkbox-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 6px 10px;
+    background: #fafafa;
+}
+
+.checkbox-item input {
+    margin: 0;
+}
+
+.checkbox-actions {
+    margin-top: 10px;
+}
+
+.empty-box {
+    color: #666;
+    font-size: 14px;
+    padding: 10px 0;
+}
+
+.split-box {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-width: 1000px;
+    background: #fcfcfc;
+}
+
+.split-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: center;
+}
+
+.custom-split-list {
+    margin-top: 10px;
+}
+
+.custom-split-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.custom-split-item label {
+    min-width: 120px;
+}
+
+.custom-split-item input {
+    width: 140px;
+    min-width: 140px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #eef4ff;
+    border: 1px solid #c7dafd;
+    font-size: 12px;
+}
+
+.warning {
+    color: #b54708;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.good {
+    color: #067647;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.editing-banner {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #fff8e8;
+    border: 1px solid #f2d38b;
+    border-radius: 8px;
+    display: none;
+    max-width: 1000px;
+}
 </style>
 </head>
 <body>
@@ -100,20 +241,69 @@ input[type="text"], input[type="number"] {
 <h2>Debt Simplifier</h2>
 
 <div class="section">
+    <h3>Participants</h3>
+    <div class="row">
+        <input id="participantInput" type="text" placeholder="Add participants separated by commas, e.g. Ding, Jie, Mengo, Maxine, Diana">
+        <button onclick="addParticipants()">Add Participants</button>
+    </div>
+    <div class="helper">Enter one or many names separated by commas.</div>
+    <div id="participantsList"></div>
+</div>
+
+<div class="section">
     <h3>Add Payment</h3>
+
+    <div id="editingBanner" class="editing-banner">
+        You are editing an existing payment.
+    </div>
+
     <div class="row">
         <input id="name" type="text" placeholder="Payment Name">
-        <input id="payer" type="text" placeholder="Payer">
-        <input id="amount" type="number" step="0.01" placeholder="Amount">
+        <select id="payer">
+            <option value="">Select Payer</option>
+        </select>
+        <input id="amount" type="number" step="0.01" placeholder="Amount" oninput="renderCustomSplitInputs()">
         <select id="currency">
             <option value="USD">$</option>
             <option value="INKIND">inKind Cash</option>
             <option value="HYATT">Hyatt Points</option>
         </select>
-        <input id="participants" type="text" placeholder="Participants (comma separated)">
         <input id="description" type="text" placeholder="Description">
-        <button onclick="addPayment()">Add Payment</button>
     </div>
+
+    <div style="margin-top: 10px;">
+        <label><strong>Select Participants</strong></label>
+        <div id="participantsCheckboxes" class="checkbox-grid"></div>
+        <div class="helper">Check everyone included in this expense.</div>
+    </div>
+
+    <div class="split-box">
+        <div class="split-row">
+            <strong>Split Type</strong>
+            <label>
+                <input type="radio" name="splitType" value="equal" checked onchange="onSplitTypeChange()">
+                Split Equally
+            </label>
+            <label>
+                <input type="radio" name="splitType" value="custom" onchange="onSplitTypeChange()">
+                Custom Split
+            </label>
+            <span class="badge" id="splitPreviewBadge">Equal split</span>
+        </div>
+
+        <div id="customSplitSection" style="display:none;">
+            <div class="custom-split-list" id="customSplitInputs"></div>
+            <div id="customSplitSummary" class="helper"></div>
+        </div>
+    </div>
+
+    <div class="checkbox-actions">
+        <button onclick="selectAllParticipants()">Select All</button>
+        <button onclick="clearSelectedParticipants()">Clear Selection</button>
+        <button id="savePaymentBtn" class="save-btn" onclick="savePayment()">Add Payment</button>
+        <button id="cancelEditBtn" class="cancel-btn" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
+    </div>
+
     <div class="small-note">
         Currencies are tracked separately. No conversion is applied between $, inKind Cash, and Hyatt Points.
     </div>
@@ -139,67 +329,414 @@ input[type="text"], input[type="number"] {
 </div>
 
 <script>
+let participants = JSON.parse(localStorage.getItem("participants") || "[]");
 let payments = JSON.parse(localStorage.getItem("payments") || "[]");
+let editingPaymentIndex = null;
 
 loadFromURL();
 render();
 
-function addPayment() {
-    const name = document.getElementById("name").value.trim();
-    const payer = document.getElementById("payer").value.trim();
-    const amount = parseFloat(document.getElementById("amount").value);
-    const currency = document.getElementById("currency").value;
-    const participants = document.getElementById("participants").value
-        .split(",")
-        .map(x => x.trim())
-        .filter(x => x.length > 0);
-    const description = document.getElementById("description").value.trim();
+function addParticipants() {
+    const input = document.getElementById("participantInput");
+    const raw = input.value.trim();
 
-    if (!name || !payer || !amount || amount <= 0 || participants.length === 0) {
-        alert("Please fill Payment Name, Payer, Amount, and Participants.");
+    if (!raw) {
+        alert("Please enter at least one participant.");
         return;
     }
 
-    if (!participants.includes(payer)) {
-        participants.push(payer);
+    const names = raw
+        .split(",")
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+
+    if (names.length === 0) {
+        alert("Please enter valid participant names.");
+        return;
     }
 
-    payments.push({
+    let addedCount = 0;
+
+    names.forEach(name => {
+        const exists = participants.some(p => p.toLowerCase() === name.toLowerCase());
+        if (!exists) {
+            participants.push(name);
+            addedCount++;
+        }
+    });
+
+    participants.sort((a, b) => a.localeCompare(b));
+    input.value = "";
+
+    save();
+    render();
+
+    if (addedCount === 0) {
+        alert("No new participants were added.");
+    }
+}
+
+function removeParticipant(name) {
+    const isUsed = payments.some(p => p.payer === name || p.participants.includes(name));
+    if (isUsed) {
+        alert("This participant is already used in a payment and cannot be removed.");
+        return;
+    }
+
+    participants = participants.filter(p => p !== name);
+    save();
+    render();
+}
+
+function savePayment() {
+    const name = document.getElementById("name").value.trim();
+    const payer = document.getElementById("payer").value;
+    const amount = parseFloat(document.getElementById("amount").value);
+    const currency = document.getElementById("currency").value;
+    const description = document.getElementById("description").value.trim();
+    const selectedParticipants = getSelectedParticipants();
+    const splitType = getSplitType();
+
+    if (!name || !payer || !amount || amount <= 0 || selectedParticipants.length === 0) {
+        alert("Please fill Payment Name, Payer, Amount, and select participants.");
+        return;
+    }
+
+    if (!selectedParticipants.includes(payer)) {
+        selectedParticipants.push(payer);
+    }
+
+    let splits = {};
+
+    if (splitType === "equal") {
+        const share = round2(amount / selectedParticipants.length);
+        selectedParticipants.forEach((person, index) => {
+            if (index === selectedParticipants.length - 1) {
+                const assigned = Object.values(splits).reduce((sum, val) => sum + val, 0);
+                splits[person] = round2(amount - assigned);
+            } else {
+                splits[person] = share;
+            }
+        });
+    } else {
+        const customSplits = getCustomSplitValues(selectedParticipants);
+        const totalCustom = round2(Object.values(customSplits).reduce((sum, val) => sum + val, 0));
+
+        if (Math.abs(totalCustom - amount) > 0.01) {
+            alert("Custom split must add up to the total amount.");
+            return;
+        }
+
+        splits = customSplits;
+    }
+
+    const paymentPayload = {
         name,
         payer,
         amount,
         currency,
-        participants,
-        description
-    });
+        participants: selectedParticipants,
+        description,
+        splitType,
+        splits
+    };
+
+    if (editingPaymentIndex === null) {
+        payments.push(paymentPayload);
+    } else {
+        payments[editingPaymentIndex] = paymentPayload;
+    }
 
     save();
     render();
-    clearInputs();
+    clearPaymentInputs();
+    cancelEdit(false);
+}
+
+function editPayment(index) {
+    const payment = payments[index];
+    if (!payment) return;
+
+    editingPaymentIndex = index;
+
+    document.getElementById("name").value = payment.name || "";
+    document.getElementById("payer").value = payment.payer || "";
+    document.getElementById("amount").value = payment.amount ?? "";
+    document.getElementById("currency").value = payment.currency || "USD";
+    document.getElementById("description").value = payment.description || "";
+
+    clearSelectedParticipants();
+    payment.participants.forEach(person => {
+        const checkbox = document.querySelector(`.participant-checkbox[value="${cssEscapeForSelector(person)}"]`);
+        if (checkbox) checkbox.checked = true;
+    });
+
+    const splitType = payment.splitType || "equal";
+    const splitRadio = document.querySelector(`input[name="splitType"][value="${splitType}"]`);
+    if (splitRadio) splitRadio.checked = true;
+
+    setEditingUI(true);
+    renderCustomSplitInputs();
+
+    if (splitType === "custom" && payment.splits) {
+        payment.participants.forEach(person => {
+            const input = document.getElementById(`custom-split-${cssSafeId(person)}`);
+            if (input && payment.splits[person] !== undefined) {
+                input.value = round2(payment.splits[person]).toFixed(2);
+            }
+        });
+        updateCustomSplitSummary();
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEdit(resetForm = true) {
+    editingPaymentIndex = null;
+    setEditingUI(false);
+    if (resetForm) {
+        clearPaymentInputs();
+    }
+}
+
+function setEditingUI(isEditing) {
+    document.getElementById("editingBanner").style.display = isEditing ? "block" : "none";
+    document.getElementById("cancelEditBtn").style.display = isEditing ? "inline-block" : "none";
+    document.getElementById("savePaymentBtn").textContent = isEditing ? "Update Payment" : "Add Payment";
+}
+
+function getSplitType() {
+    const checked = document.querySelector('input[name="splitType"]:checked');
+    return checked ? checked.value : "equal";
+}
+
+function onSplitTypeChange() {
+    updateSplitPreviewBadge();
+    renderCustomSplitInputs();
+}
+
+function getSelectedParticipants() {
+    return Array.from(document.querySelectorAll(".participant-checkbox:checked"))
+        .map(checkbox => checkbox.value);
+}
+
+function selectAllParticipants() {
+    document.querySelectorAll(".participant-checkbox").forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    renderCustomSplitInputs();
+}
+
+function clearSelectedParticipants() {
+    document.querySelectorAll(".participant-checkbox").forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    renderCustomSplitInputs();
+}
+
+function getCustomSplitValues(selectedParticipants) {
+    const splits = {};
+    selectedParticipants.forEach(person => {
+        const input = document.getElementById(`custom-split-${cssSafeId(person)}`);
+        const value = input ? parseFloat(input.value) : 0;
+        splits[person] = round2(isNaN(value) ? 0 : value);
+    });
+    return splits;
 }
 
 function deletePayment(index) {
+    if (editingPaymentIndex === index) {
+        cancelEdit();
+    } else if (editingPaymentIndex !== null && index < editingPaymentIndex) {
+        editingPaymentIndex--;
+    }
+
     payments.splice(index, 1);
     save();
     render();
 }
 
-function clearInputs() {
+function clearPaymentInputs() {
     document.getElementById("name").value = "";
     document.getElementById("payer").value = "";
     document.getElementById("amount").value = "";
     document.getElementById("currency").value = "USD";
-    document.getElementById("participants").value = "";
     document.getElementById("description").value = "";
+    clearSelectedParticipants();
+    document.querySelector('input[name="splitType"][value="equal"]').checked = true;
+    onSplitTypeChange();
 }
 
 function save() {
+    localStorage.setItem("participants", JSON.stringify(participants));
     localStorage.setItem("payments", JSON.stringify(payments));
 }
 
 function render() {
+    renderParticipants();
+    renderPayerOptions();
+    renderParticipantsCheckboxes();
     renderPayments();
     renderDebts();
+    updateSplitPreviewBadge();
+    renderCustomSplitInputs();
+}
+
+function renderParticipants() {
+    const container = document.getElementById("participantsList");
+
+    if (participants.length === 0) {
+        container.innerHTML = `<div class="small-note">No participants yet.</div>`;
+        return;
+    }
+
+    container.innerHTML = participants.map(name => `
+        <span class="participant-tag">
+            <span>${escapeHtml(name)}</span>
+            <button type="button" onclick="removeParticipant('${escapeJs(name)}')">x</button>
+        </span>
+    `).join("");
+}
+
+function renderPayerOptions() {
+    const payerSelect = document.getElementById("payer");
+    const currentValue = payerSelect.value;
+
+    let html = `<option value="">Select Payer</option>`;
+    participants.forEach(name => {
+        html += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+    });
+
+    payerSelect.innerHTML = html;
+
+    if (participants.includes(currentValue)) {
+        payerSelect.value = currentValue;
+    }
+}
+
+function renderParticipantsCheckboxes() {
+    const container = document.getElementById("participantsCheckboxes");
+    const selectedValues = getSelectedParticipants();
+
+    if (participants.length === 0) {
+        container.innerHTML = `<div class="empty-box">No participants available yet.</div>`;
+        return;
+    }
+
+    container.innerHTML = participants.map(name => `
+        <label class="checkbox-item">
+            <input
+                type="checkbox"
+                class="participant-checkbox"
+                value="${escapeHtml(name)}"
+                ${selectedValues.includes(name) ? "checked" : ""}
+                onchange="renderCustomSplitInputs()"
+            >
+            <span>${escapeHtml(name)}</span>
+        </label>
+    `).join("");
+}
+
+function renderCustomSplitInputs() {
+    const splitType = getSplitType();
+    const section = document.getElementById("customSplitSection");
+    const container = document.getElementById("customSplitInputs");
+    const summary = document.getElementById("customSplitSummary");
+    const amount = parseFloat(document.getElementById("amount").value);
+    const selectedParticipants = getSelectedParticipants();
+
+    if (splitType !== "custom") {
+        section.style.display = "none";
+        container.innerHTML = "";
+        summary.innerHTML = "";
+        return;
+    }
+
+    section.style.display = "block";
+
+    if (selectedParticipants.length === 0) {
+        container.innerHTML = `<div class="empty-box">Select participants first.</div>`;
+        summary.innerHTML = "";
+        return;
+    }
+
+    const existingValues = {};
+    selectedParticipants.forEach(person => {
+        const existing = document.getElementById(`custom-split-${cssSafeId(person)}`);
+        if (existing) {
+            existingValues[person] = existing.value;
+        }
+    });
+
+    container.innerHTML = selectedParticipants.map(person => `
+        <div class="custom-split-item">
+            <label for="custom-split-${cssSafeId(person)}">${escapeHtml(person)}</label>
+            <input
+                id="custom-split-${cssSafeId(person)}"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value="${escapeHtml(existingValues[person] || "")}"
+                oninput="updateCustomSplitSummary()"
+            >
+        </div>
+    `).join("");
+
+    if (!Object.keys(existingValues).length && !isNaN(amount) && amount > 0) {
+        autoFillEqualCustomSplit(selectedParticipants, amount);
+    }
+
+    updateCustomSplitSummary();
+}
+
+function autoFillEqualCustomSplit(selectedParticipants, amount) {
+    const share = round2(amount / selectedParticipants.length);
+    let running = 0;
+
+    selectedParticipants.forEach((person, index) => {
+        const input = document.getElementById(`custom-split-${cssSafeId(person)}`);
+        if (!input) return;
+
+        if (index === selectedParticipants.length - 1) {
+            input.value = round2(amount - running).toFixed(2);
+        } else {
+            input.value = share.toFixed(2);
+            running = round2(running + share);
+        }
+    });
+}
+
+function updateSplitPreviewBadge() {
+    const splitType = getSplitType();
+    const badge = document.getElementById("splitPreviewBadge");
+    badge.textContent = splitType === "equal" ? "Equal split" : "Custom split";
+}
+
+function updateCustomSplitSummary() {
+    const summary = document.getElementById("customSplitSummary");
+    const amount = parseFloat(document.getElementById("amount").value);
+    const selectedParticipants = getSelectedParticipants();
+
+    if (selectedParticipants.length === 0) {
+        summary.innerHTML = "";
+        return;
+    }
+
+    const splits = getCustomSplitValues(selectedParticipants);
+    const total = round2(Object.values(splits).reduce((sum, val) => sum + val, 0));
+
+    if (isNaN(amount) || amount <= 0) {
+        summary.innerHTML = `<div class="warning">Enter a valid total amount first.</div>`;
+        return;
+    }
+
+    const diff = round2(amount - total);
+
+    if (Math.abs(diff) <= 0.01) {
+        summary.innerHTML = `<div class="good">Custom split total matches: ${total.toFixed(2)}</div>`;
+    } else {
+        summary.innerHTML = `<div class="warning">Custom split total is ${total.toFixed(2)}. It needs to equal ${amount.toFixed(2)}. Difference: ${diff.toFixed(2)}</div>`;
+    }
 }
 
 function renderPayments() {
@@ -209,6 +746,7 @@ function renderPayments() {
             <th>Payer</th>
             <th>Amount</th>
             <th>Currency</th>
+            <th>Split Type</th>
             <th>Participants</th>
             <th>Description</th>
             <th>Action</th>
@@ -218,7 +756,7 @@ function renderPayments() {
     if (payments.length === 0) {
         html += `
             <tr>
-                <td colspan="7">No payments yet.</td>
+                <td colspan="8">No payments yet.</td>
             </tr>
         `;
     } else {
@@ -229,15 +767,31 @@ function renderPayments() {
                     <td>${escapeHtml(p.payer)}</td>
                     <td>${formatAmount(p.amount, p.currency)}</td>
                     <td>${currencyLabel(p.currency)}</td>
-                    <td>${escapeHtml(p.participants.join(", "))}</td>
+                    <td>${escapeHtml(p.splitType === "custom" ? "Custom" : "Equal")}</td>
+                    <td>${escapeHtml(formatParticipantsWithSplits(p))}</td>
                     <td>${escapeHtml(p.description || "")}</td>
-                    <td><button class="delete-btn" onclick="deletePayment(${index})">Delete</button></td>
+                    <td>
+                        <button class="edit-btn" onclick="editPayment(${index})">Edit</button>
+                        <button class="delete-btn" onclick="deletePayment(${index})">Delete</button>
+                    </td>
                 </tr>
             `;
         });
     }
 
     document.getElementById("paymentsTable").innerHTML = html;
+}
+
+function formatParticipantsWithSplits(payment) {
+    if (!payment.splits) {
+        return payment.participants.join(", ");
+    }
+
+    return payment.participants.map(person => {
+        const share = payment.splits[person];
+        if (share === undefined) return person;
+        return `${person} (${formatAmountInline(share, payment.currency)})`;
+    }).join(", ");
 }
 
 function renderDebts() {
@@ -292,16 +846,23 @@ function getSimplifiedDebtsByCurrency(currency) {
     payments
         .filter(p => p.currency === currency)
         .forEach(p => {
-            const share = p.amount / p.participants.length;
+            const paymentSplits = p.splits || {};
 
             p.participants.forEach(person => {
+                if (!(person in balance)) {
+                    balance[person] = 0;
+                }
+            });
+
+            if (!(p.payer in balance)) {
+                balance[p.payer] = 0;
+            }
+
+            p.participants.forEach(person => {
+                const share = round2(paymentSplits[person] || 0);
                 if (person !== p.payer) {
-                    balance[person] = (balance[person] || 0) - share;
-                    balance[p.payer] = (balance[p.payer] || 0) + share;
-                } else {
-                    if (!(person in balance)) {
-                        balance[person] = balance[person] || 0;
-                    }
+                    balance[person] = round2(balance[person] - share);
+                    balance[p.payer] = round2(balance[p.payer] + share);
                 }
             });
         });
@@ -345,7 +906,11 @@ function getSimplifiedDebtsByCurrency(currency) {
 }
 
 function generateLink() {
-    const data = btoa(unescape(encodeURIComponent(JSON.stringify(payments))));
+    const payload = {
+        participants,
+        payments
+    };
+    const data = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     const link = location.origin + location.pathname + "?data=" + encodeURIComponent(data);
     document.getElementById("shareLink").value = link;
 }
@@ -368,7 +933,9 @@ function loadFromURL() {
 
     if (data) {
         try {
-            payments = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(data)))));
+            const parsed = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(data)))));
+            participants = Array.isArray(parsed.participants) ? parsed.participants : [];
+            payments = Array.isArray(parsed.payments) ? parsed.payments : [];
             save();
         } catch (e) {
             console.error("Failed to load shared data:", e);
@@ -392,8 +959,24 @@ function formatAmount(amount, currency) {
     return rounded.toFixed(2) + " " + currency;
 }
 
+function formatAmountInline(amount, currency) {
+    const rounded = round2(amount);
+    if (currency === "USD") return "$" + rounded.toFixed(2);
+    if (currency === "INKIND") return rounded.toFixed(2) + " inKind";
+    if (currency === "HYATT") return rounded.toFixed(2) + " pts";
+    return rounded.toFixed(2) + " " + currency;
+}
+
 function round2(num) {
     return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+function cssSafeId(str) {
+    return String(str).replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function cssEscapeForSelector(str) {
+    return String(str).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function escapeHtml(str) {
@@ -403,6 +986,13 @@ function escapeHtml(str) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+function escapeJs(str) {
+    return String(str)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"');
 }
 </script>
 
